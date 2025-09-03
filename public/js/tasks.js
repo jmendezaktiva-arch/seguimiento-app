@@ -113,6 +113,30 @@ const loadUsersIntoDropdowns = async () => {
         if (tasks.length === 0) {
             taskListContainer.innerHTML = '<p class="text-slate-500">No tienes tareas asignadas.</p>';
             return;
+            // Dentro de la función renderTasks, busca este bloque:
+
+// EL NUEVO CÓDIGO CORRECTO
+taskElement.innerHTML = `
+    <div class="flex items-center">
+        <span class="status-circle mr-3 h-4 w-4 flex-shrink-0 cursor-pointer rounded-full ${statusColor}" title="Cambiar estado"></span>
+        <p class="text-slate-700">${task.description}</p>
+    </div>
+
+    <div class="flex items-center space-x-4">
+        <span class="text-sm text-slate-500">${task.dueDate || ''}</span>
+        <button
+            title="Crear invitación de calendario"
+            class="create-event-btn text-slate-400 hover:text-blue-600"
+            data-description="${task.description}"
+            data-duedate="${task.dueDate}"
+            data-assignee="${task.assignedTo}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+            </svg>
+        </button>
+    </div>
+    `;
+
         }
         tasks.sort((a, b) => {
             const dateA = parseDate(a.dueDate);
@@ -235,6 +259,53 @@ const loadUsersIntoDropdowns = async () => {
         }
     });
     
+// ... justo antes de la línea final "loadUsersIntoDropdowns();"
+
+taskListContainer.addEventListener('click', async (event) => {
+    const eventButton = event.target.closest('.create-event-btn');
+    if (eventButton) {
+        event.preventDefault();
+
+        const { description, duedate, assignee } = eventButton.dataset;
+
+        // Define quién envía la invitación. Puede ser el usuario actual o uno fijo.
+        const organizerEmail = localStorage.getItem('userEmail');
+
+        if (!duedate) {
+            alert('Esta tarea no tiene una fecha de entrega para crear un evento.');
+            return;
+        }
+
+        const originalButtonContent = eventButton.innerHTML;
+        eventButton.innerHTML = `<svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+        eventButton.disabled = true;
+
+        try {
+            const response = await fetch('/.netlify/functions/createCalendarEvent', {
+                method: 'POST',
+                body: JSON.stringify({
+                    summary: description,
+                    dueDate: duedate,
+                    attendeeEmail: assignee,
+                    organizerEmail: organizerEmail,
+                }),
+            });
+
+            if (!response.ok) throw new Error('El servidor devolvió un error.');
+
+            alert(`Invitación enviada a ${assignee} para la tarea "${description}".`);
+
+        } catch (error) {
+            console.error('Error al enviar la invitación:', error);
+            alert('No se pudo enviar la invitación de calendario.');
+        } finally {
+            eventButton.innerHTML = originalButtonContent;
+            eventButton.disabled = false;
+        }
+    }
+});
+
+
 // ---- INICIO DEL CAMBIO ----
     loadUsersIntoDropdowns();
     loadTasks();
