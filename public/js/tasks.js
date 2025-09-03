@@ -62,10 +62,6 @@ const loadUsersIntoDropdowns = async () => {
 };
 // ---- FIN DEL CAMBIO ----
 
-// ---- INICIO DEL CAMBIO ----
-loadUsersIntoDropdowns();
-loadTasks(); // <-- Esta línea es la que falta y es crucial.
-// ---- FIN DEL CAMBIO ----
 
     // ===============================================================
     //                  LÓGICA DE RESULTADOS
@@ -239,5 +235,7 @@ loadTasks(); // <-- Esta línea es la que falta y es crucial.
         }
     });
     
+// ---- INICIO DEL CAMBIO ----
+    loadUsersIntoDropdowns();
     loadTasks();
 });
