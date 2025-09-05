@@ -236,6 +236,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+    // ---- INICIO DE LA CORRECCIÓN ----
+    // La fecha de la hoja (ej. "5/9/2025") se convierte al formato YYYY-MM-DD
+    const dateParts = duedate.split('/'); // ["5", "9", "2025"]
+    const month = dateParts[0].padStart(2, '0'); // "05"
+    const day = dateParts[1].padStart(2, '0');   // "09"
+    const year = dateParts[2];                   // "2025"
+    const formattedDueDate = `${year}-${month}-${day}`; // Resultado: "2025-09-05"
+    // ---- FIN DE LA CORRECCIÓN ----
+
             const originalButtonContent = eventButton.innerHTML;
             eventButton.innerHTML = `<svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>`;
             eventButton.disabled = true;
