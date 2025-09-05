@@ -1,4 +1,4 @@
-// public/js/tasks.js (VERSIÓN FINAL CORREGIDA)
+// public/js/tasks.js (VERSIÓN FINAL CORREGIDA Y UNIFICADA)
 
 const getCurrentWeekId = () => {
     const date = new Date();
@@ -31,42 +31,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveResultButton = document.getElementById('save-result-button');
     const expectedResultTextarea = document.getElementById('expected-result-textarea');
     const resultStatusMessage = document.getElementById('result-status-message');
-    // ---- INICIO DEL CAMBIO ----
     const taskResponsibleSelect = document.getElementById('task-responsible');
     const resultResponsibleSelect = document.getElementById('result-responsible');
-// ---- FIN DEL CAMBIO ----
 
-// ---- INICIO DEL CAMBIO ----
-const loadUsersIntoDropdowns = async () => {
-    try {
-        const response = await fetch('/.netlify/functions/getUsers');
-        const users = await response.json();
+    const loadUsersIntoDropdowns = async () => {
+        try {
+            const response = await fetch('/.netlify/functions/getUsers');
+            const users = await response.json();
+            taskResponsibleSelect.innerHTML = '<option value="">Selecciona un responsable</option>';
+            resultResponsibleSelect.innerHTML = '<option value="">Selecciona un responsable</option>';
+            users.forEach(user => {
+                if (user.email) {
+                    const option = document.createElement('option');
+                    option.value = user.email;
+                    option.textContent = user.email;
+                    taskResponsibleSelect.appendChild(option.cloneNode(true));
+                    resultResponsibleSelect.appendChild(option);
+                }
+            });
+        } catch (error) {
+            console.error('Error al cargar usuarios:', error);
+            taskResponsibleSelect.innerHTML = '<option value="">Error al cargar</option>';
+            resultResponsibleSelect.innerHTML = '<option value="">Error al cargar</option>';
+        }
+    };
 
-        taskResponsibleSelect.innerHTML = '<option value="">Selecciona un responsable</option>';
-        resultResponsibleSelect.innerHTML = '<option value="">Selecciona un responsable</option>';
-
-        users.forEach(user => {
-            if (user.email) {
-                const option = document.createElement('option');
-                option.value = user.email;
-                option.textContent = user.email;
-                taskResponsibleSelect.appendChild(option.cloneNode(true));
-                resultResponsibleSelect.appendChild(option);
-            }
-        });
-    } catch (error) {
-        console.error('Error al cargar usuarios:', error);
-        taskResponsibleSelect.innerHTML = '<option value="">Error al cargar</option>';
-        resultResponsibleSelect.innerHTML = '<option value="">Error al cargar</option>';
-    }
-};
-// ---- FIN DEL CAMBIO ----
-
-
-    // ===============================================================
-    //                  LÓGICA DE RESULTADOS
-    // ===============================================================
-    
     saveResultButton.addEventListener('click', async () => {
         const weekId = getCurrentWeekId();
         const expectedResult = expectedResultTextarea.value.trim();
@@ -75,26 +64,21 @@ const loadUsersIntoDropdowns = async () => {
             resultStatusMessage.className = 'mt-2 text-sm text-red-600';
             return;
         }
-
         saveResultButton.disabled = true;
         saveResultButton.textContent = 'Guardando...';
-        resultStatusMessage.textContent = '';
-
         try {
             await fetch('/.netlify/functions/updateResultados', {
                 method: 'POST',
                 body: JSON.stringify({
                     action: 'saveResult',
                     weekId,
-                     userEmail: resultResponsibleSelect.value, // Obtiene el email del <select>
+                    userEmail: resultResponsibleSelect.value,
                     expectedResult,
                 }),
             });
-            expectedResultTextarea.value = '';
             resultStatusMessage.textContent = '¡Resultado guardado con éxito!';
             resultStatusMessage.className = 'mt-2 text-sm text-green-600';
         } catch (error) {
-            console.error('Error al guardar:', error);
             resultStatusMessage.textContent = 'No se pudo guardar el resultado.';
             resultStatusMessage.className = 'mt-2 text-sm text-red-600';
         } finally {
@@ -104,40 +88,13 @@ const loadUsersIntoDropdowns = async () => {
         }
     });
 
-    // ===============================================================
-    //                  LÓGICA DE TAREAS
-    // ===============================================================
-    
     const renderTasks = (tasks) => {
         taskListContainer.innerHTML = '';
         if (tasks.length === 0) {
             taskListContainer.innerHTML = '<p class="text-slate-500">No tienes tareas asignadas.</p>';
             return;
-            // Dentro de la función renderTasks, busca este bloque:
-
-// EL NUEVO CÓDIGO CORRECTO
-taskElement.innerHTML = `
-    <div class="flex items-center">
-        <span class="status-circle mr-3 h-4 w-4 flex-shrink-0 cursor-pointer rounded-full ${statusColor}" title="Cambiar estado"></span>
-        <p class="text-slate-700">${task.description}</p>
-    </div>
-
-    <div class="flex items-center space-x-4">
-        <span class="text-sm text-slate-500">${task.dueDate || ''}</span>
-        <button
-            title="Crear invitación de calendario"
-            class="create-event-btn text-slate-400 hover:text-blue-600"
-            data-description="${task.description}"
-            data-duedate="${task.dueDate}"
-            data-assignee="${task.assignedTo}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
-            </svg>
-        </button>
-    </div>
-    `;
-
         }
+        
         tasks.sort((a, b) => {
             const dateA = parseDate(a.dueDate);
             const dateB = parseDate(b.dueDate);
@@ -145,6 +102,7 @@ taskElement.innerHTML = `
             if (!dateB) return -1;
             return dateA - dateB;
         });
+
         const groupedTasks = tasks.reduce((acc, task) => {
             const date = parseDate(task.dueDate);
             const groupKey = (date && !isNaN(date))
@@ -154,6 +112,7 @@ taskElement.innerHTML = `
             acc[groupKey].push(task);
             return acc;
         }, {});
+
         for (const groupKey in groupedTasks) {
             const monthBlock = document.createElement('div');
             monthBlock.className = 'mb-4';
@@ -165,61 +124,58 @@ taskElement.innerHTML = `
                 <div class="tasks-sublist mt-2 hidden space-y-2 pl-4"></div>
             `;
             const tasksSublist = monthBlock.querySelector('.tasks-sublist');
-            
-            // ---- AQUÍ ESTÁ LA CORRECCIÓN ----
-            // Se usa 'groupedTasks[groupKey]' en lugar de la variable inexistente 'monthTasks'.
+
             groupedTasks[groupKey].forEach(task => {
                 const statusColor = task.status === 'Cumplida' ? 'bg-green-500' : 'bg-red-500';
                 const taskElement = document.createElement('div');
                 taskElement.className = 'flex items-center justify-between rounded-md border border-slate-200 p-3';
                 taskElement.dataset.rowNumber = task.rowNumber;
                 taskElement.dataset.status = task.status;
+
+                // --- INICIO DEL CÓDIGO CORREGIDO ---
+                // El HTML se construye correctamente aquí, moviendo el código que estaba en el lugar equivocado.
                 taskElement.innerHTML = `
                     <div class="flex items-center">
                         <span class="status-circle mr-3 h-4 w-4 flex-shrink-0 cursor-pointer rounded-full ${statusColor}" title="Cambiar estado"></span>
                         <p class="text-slate-700">${task.description}</p>
                     </div>
-                    <div class="text-sm text-slate-500">${task.dueDate || ''}</div>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-slate-500">${task.dueDate || ''}</span>
+                        <button
+                            title="Crear invitación de calendario"
+                            class="create-event-btn text-slate-400 hover:text-blue-600"
+                            data-description="${task.description}"
+                            data-duedate="${task.dueDate}"
+                            data-assignee="${task.assignedTo}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
                 `;
+                // --- FIN DEL CÓDIGO CORREGIDO ---
                 tasksSublist.appendChild(taskElement);
             });
             taskListContainer.appendChild(monthBlock);
         }
     };
-    
-    taskListContainer.addEventListener('click', (event) => {
-        const header = event.target.closest('.flex.cursor-pointer');
-        if (header && !event.target.classList.contains('status-circle')) {
-            const sublist = header.nextElementSibling;
-            const arrow = header.querySelector('svg');
-            sublist.classList.toggle('hidden');
-            arrow.classList.toggle('rotate-180');
-        }
-    });
 
     const loadTasks = async () => {
         try {
             const response = await fetch(`/.netlify/functions/getTasks?email=${userEmail}`);
-            if (!response.ok) throw new Error('No se pudieron cargar las tareas.');
             const tasks = await response.json();
             renderTasks(tasks);
         } catch (error) {
-            console.error(error);
             taskListContainer.innerHTML = '<p class="text-red-500">Error al cargar las tareas.</p>';
         }
     };
 
     addTaskForm.addEventListener('submit', async (event) => {
         event.preventDefault();
-        const descriptionInput = document.getElementById('task-description');
-        const dateInput = document.getElementById('task-date');
+        const description = document.getElementById('task-description').value.trim();
+        const dueDate = document.getElementById('task-date').value;
         const submitButton = addTaskForm.querySelector('button');
-        const description = descriptionInput.value.trim();
-        const dueDate = dateInput.value;
-        if (!description || !dueDate) {
-            alert('Por favor, completa todos los campos.');
-            return;
-        }
+        if (!description || !dueDate) return;
         submitButton.disabled = true;
         submitButton.textContent = 'Guardando...';
         try {
@@ -227,11 +183,9 @@ taskElement.innerHTML = `
                 method: 'POST',
                 body: JSON.stringify({ action: 'create', description, dueDate, assignedTo: taskResponsibleSelect.value }),
             });
-            descriptionInput.value = '';
-            dateInput.value = '';
+            addTaskForm.reset();
             loadTasks();
         } catch (error) {
-            console.error('Error al crear la tarea:', error);
             alert('No se pudo crear la tarea.');
         } finally {
             submitButton.disabled = false;
@@ -239,13 +193,26 @@ taskElement.innerHTML = `
         }
     });
 
+    // --- INICIO DEL MANEJADOR DE EVENTOS UNIFICADO ---
+    // Un solo listener para gestionar clics en el estado, el calendario y los encabezados.
     taskListContainer.addEventListener('click', async (event) => {
-        if (event.target.classList.contains('status-circle')) {
-            const taskElement = event.target.closest('div[data-row-number]');
-            if (!taskElement) return;
-            const rowNumber = taskElement.dataset.rowNumber;
-            const currentStatus = taskElement.dataset.status;
-            const newStatus = currentStatus === 'Pendiente' ? 'Cumplida' : 'Pendiente';
+        const target = event.target;
+
+        // Lógica para desplegar/colapsar meses
+        const header = target.closest('.flex.cursor-pointer');
+        if (header && !target.classList.contains('status-circle')) {
+            const sublist = header.nextElementSibling;
+            const arrow = header.querySelector('svg');
+            sublist.classList.toggle('hidden');
+            arrow.classList.toggle('rotate-180');
+            return;
+        }
+
+        // Lógica para cambiar el estado de la tarea
+        if (target.classList.contains('status-circle')) {
+            const taskElement = target.closest('div[data-row-number]');
+            const { rowNumber, status } = taskElement.dataset;
+            const newStatus = status === 'Pendiente' ? 'Cumplida' : 'Pendiente';
             try {
                 await fetch('/.netlify/functions/updateTask', {
                     method: 'POST',
@@ -253,60 +220,50 @@ taskElement.innerHTML = `
                 });
                 loadTasks();
             } catch (error) {
-                console.error('Error al actualizar el estado:', error);
                 alert('No se pudo actualizar la tarea.');
             }
-        }
-    });
-    
-// ... justo antes de la línea final "loadUsersIntoDropdowns();"
-
-taskListContainer.addEventListener('click', async (event) => {
-    const eventButton = event.target.closest('.create-event-btn');
-    if (eventButton) {
-        event.preventDefault();
-
-        const { description, duedate, assignee } = eventButton.dataset;
-
-        // Define quién envía la invitación. Puede ser el usuario actual o uno fijo.
-        const organizerEmail = localStorage.getItem('userEmail');
-
-        if (!duedate) {
-            alert('Esta tarea no tiene una fecha de entrega para crear un evento.');
             return;
         }
 
-        const originalButtonContent = eventButton.innerHTML;
-        eventButton.innerHTML = `<svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
-        eventButton.disabled = true;
+        // Lógica para crear el evento de calendario
+        const eventButton = target.closest('.create-event-btn');
+        if (eventButton) {
+            const { description, duedate, assignee } = eventButton.dataset;
+            const organizerEmail = localStorage.getItem('userEmail');
 
-        try {
-            const response = await fetch('/.netlify/functions/createCalendarEvent', {
-                method: 'POST',
-                body: JSON.stringify({
-                    summary: description,
-                    dueDate: duedate,
-                    attendeeEmail: assignee,
-                    organizerEmail: organizerEmail,
-                }),
-            });
+            if (!duedate) {
+                alert('Esta tarea no tiene una fecha para crear un evento.');
+                return;
+            }
 
-            if (!response.ok) throw new Error('El servidor devolvió un error.');
+            const originalButtonContent = eventButton.innerHTML;
+            eventButton.innerHTML = `<svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>`;
+            eventButton.disabled = true;
 
-            alert(`Invitación enviada a ${assignee} para la tarea "${description}".`);
-
-        } catch (error) {
-            console.error('Error al enviar la invitación:', error);
-            alert('No se pudo enviar la invitación de calendario.');
-        } finally {
-            eventButton.innerHTML = originalButtonContent;
-            eventButton.disabled = false;
+            try {
+                const response = await fetch('/.netlify/functions/createCalendarEvent', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        summary: description,
+                        dueDate: duedate,
+                        attendeeEmail: assignee,
+                        organizerEmail: organizerEmail,
+                    }),
+                });
+                if (!response.ok) throw new Error(await response.text());
+                alert(`Invitación enviada a ${assignee}.`);
+            } catch (error) {
+                console.error('Error al enviar la invitación:', error);
+                alert('No se pudo enviar la invitación. Revisa la consola para más detalles.');
+            } finally {
+                eventButton.innerHTML = originalButtonContent;
+                eventButton.disabled = false;
+            }
         }
-    }
-});
+    });
+    // --- FIN DEL MANEJADOR DE EVENTOS UNIFICADO ---
 
-
-// ---- INICIO DEL CAMBIO ----
+    // Llamadas iniciales al cargar la página
     loadUsersIntoDropdowns();
     loadTasks();
 });
