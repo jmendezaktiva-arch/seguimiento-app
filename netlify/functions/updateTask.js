@@ -1,4 +1,4 @@
-// netlify/functions/updateTask.js (VERSIÓN FINAL Y CORREGIDA)
+// netlify/functions/updateTask.js
 
 const { google } = require('googleapis');
 
@@ -15,56 +15,81 @@ const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 const sheetName = 'Tareas';
 
 exports.handler = async (event) => {
+  // Solo permitimos peticiones POST
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   try {
-    const data = JSON.parse(event.body);
+    console.log('Función updateTask iniciada.');
+    console.log('Datos recibidos (body):', event.body);
 
-    // Lógica para ACTUALIZAR el estado de una tarea
+    const data = JSON.parse(event.body);
+    console.log('Datos parseados:', data);
+
+    // --- Lógica para ACTUALIZAR una tarea existente ---
     if (data.action === 'updateStatus') {
+      console.log('Acción detectada: updateStatus');
       const { rowNumber, newStatus } = data;
-      // ---- INICIO DE LA CORRECCIÓN 1 ----
+            // ---- INICIO DE LA CORRECCIÓN 1 ----
       // El estado ahora está en la columna F.
       const range = `${sheetName}!F${rowNumber}`;
       // ---- FIN DE LA CORRECCIÓN 1 ----
+      console.log(`Actualizando rango ${range} a "${newStatus}"`);
 
-      await sheets.spreadsheets.values.update({
+      const response = await sheets.spreadsheets.values.update({
         spreadsheetId,
         range,
         valueInputOption: 'USER_ENTERED',
-        resource: { values: [[newStatus]] },
+        resource: {
+          values: [[newStatus]],
+        },
       });
+      
+      console.log('Respuesta de la API de Google (update):', response.data);
       return { statusCode: 200, body: JSON.stringify({ message: 'Tarea actualizada' }) };
     }
 
-    // Lógica para CREAR una nueva tarea
+    // --- Lógica para CREAR una nueva tarea ---
     if (data.action === 'create') {
-      const { description, dueDate, dueTime, assignedTo } = data;
-      const newTaskId = Date.now().toString();
-      const newRow = [newTaskId, description, assignedTo, dueDate, dueTime, 'Pendiente'];
+      console.log('Acción detectada: create');
+  // ---- INICIO DE LA CORRECCIÓN ----
+  // Se extrae dueTime de los datos recibidos
+  const { description, dueDate, dueTime, assignedTo } = data;
+  const newTaskId = Date.now().toString();
+  // Se añade dueTime a la nueva fila en la posición correcta
+  const newRow = [newTaskId, description, assignedTo, dueDate, dueTime, 'Pendiente'];
+  // ---- FIN DE LA CORRECCIÓN ----
+      console.log('Creando nueva fila:', newRow);
 
-      await sheets.spreadsheets.values.append({
+      const response = await sheets.spreadsheets.values.append({
         spreadsheetId,
-        // ---- INICIO DE LA CORRECCIÓN 2 ----
+                // ---- INICIO DE LA CORRECCIÓN 2 ----
         // El rango de datos ahora es hasta la columna F.
         range: `${sheetName}!A:F`,
         // ---- FIN DE LA CORRECCIÓN 2 ----
+
         valueInputOption: 'USER_ENTERED',
         insertDataOption: 'INSERT_ROWS',
-        resource: { values: [newRow] },
+        resource: {
+          values: [newRow],
+        },
       });
+
+      console.log('Respuesta de la API de Google (append):', response.data);
       return { statusCode: 201, body: JSON.stringify({ message: 'Tarea creada' }) };
     }
 
+    console.warn('Acción no reconocida:', data.action);
     return { statusCode: 400, body: JSON.stringify({ error: 'Acción no válida' }) };
 
   } catch (error) {
-    console.error('Error en la función updateTask:', error);
+    console.error('--- ERROR EN LA FUNCIÓN updateTask ---');
+    console.error('Error:', error);
+    console.error('Stack:', error.stack);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'No se pudo actualizar la tarea.' }),
+      body: JSON.stringify({ error: 'No se pudo actualizar la tarea. Revisa el log de la función en Netlify.' }),
     };
   }
 };
