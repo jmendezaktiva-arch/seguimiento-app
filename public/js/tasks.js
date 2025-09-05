@@ -135,23 +135,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 // --- INICIO DEL CÓDIGO CORREGIDO ---
                 // El HTML se construye correctamente aquí, moviendo el código que estaba en el lugar equivocado.
                 taskElement.innerHTML = `
-                    <div class="flex items-center">
-                        <span class="status-circle mr-3 h-4 w-4 flex-shrink-0 cursor-pointer rounded-full ${statusColor}" title="Cambiar estado"></span>
-                        <p class="text-slate-700">${task.description}</p>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <span class="text-sm text-slate-500">${task.dueDate || ''}</span>
-                        <button
-                            title="Crear invitación de calendario"
-                            class="create-event-btn text-slate-400 hover:text-blue-600"
-                            data-description="${task.description}"
-                            data-duedate="${task.dueDate}"
-                            data-duetime="${task.dueTime || ''}" data-assignee="${task.assignedTo}">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
-                    </div>
+    <div class="flex items-center flex-grow">
+        <span class="status-circle mr-3 h-4 w-4 flex-shrink-0 cursor-pointer rounded-full ${statusColor}" title="Cambiar estado"></span>
+        <div class="min-w-0">
+            <p class="text-slate-800 font-medium truncate">${task.description}</p>
+            <p class="text-sm text-slate-500 truncate">${task.assignedTo}</p>
+            </div>
+    </div>
+    <div class="flex items-center space-x-4 flex-shrink-0 ml-4">
+        <span class="text-sm text-slate-500">${task.dueDate || ''}</span>
+        <button
+            title="Crear invitación de calendario"
+            class="create-event-btn text-slate-400 hover:text-blue-600"
+            data-description="${task.description}"
+            data-duedate="${task.dueDate}"
+            data-duetime="${task.dueTime || ''}"
+            data-assignee="${task.assignedTo}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+            </svg>
+        </button>
+    </div>
                 `;
                 // --- FIN DEL CÓDIGO CORREGIDO ---
                 tasksSublist.appendChild(taskElement);
