@@ -170,32 +170,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    addTaskForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const description = document.getElementById('task-description').value.trim();
-        const dueDate = document.getElementById('task-date').value;
-        // ---- INICIO DEL CAMBIO ----
-        const dueTime = document.getElementById('task-time').value; // Captura la hora
-        // ---- FIN DEL CAMBIO ----
-        const submitButton = addTaskForm.querySelector('button');
-        if (!description || !dueDate) return;
-        submitButton.disabled = true;
-        submitButton.textContent = 'Guardando...';
-        try {
-            await fetch('/.netlify/functions/updateTask', {
-                method: 'POST',
-                body: JSON.stringify({ action: 'create', description, dueDate, assignedTo: taskResponsibleSelect.value }),
-            });
-            addTaskForm.reset();
-            loadTasks();
-        } catch (error) {
-            alert('No se pudo crear la tarea.');
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Guardar Tarea';
-        }
-    });
+// DENTRO DE public/js/tasks.js
 
+addTaskForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const description = document.getElementById('task-description').value.trim();
+    const dueDate = document.getElementById('task-date').value;
+    const dueTime = document.getElementById('task-time').value; // La hora se captura correctamente
+    const submitButton = addTaskForm.querySelector('button');
+
+    if (!description || !dueDate) {
+        alert('La descripción y la fecha son obligatorias.');
+        return;
+    }
+
+    submitButton.disabled = true;
+    submitButton.textContent = 'Guardando...';
+
+    try {
+        await fetch('/.netlify/functions/updateTask', {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'create',
+                description,
+                dueDate,
+                dueTime, // <-- INICIO DE LA CORRECCIÓN: Se añade la hora aquí
+                assignedTo: taskResponsibleSelect.value
+            }),
+        });
+
+        // Estas dos líneas se ejecutan después de guardar con éxito
+        addTaskForm.reset();
+        loadTasks();
+
+    } catch (error) {
+        alert('No se pudo crear la tarea.');
+        console.error('Error al crear tarea:', error);
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Guardar Tarea';
+    }
+});
     // --- INICIO DEL MANEJADOR DE EVENTOS UNIFICADO ---
     // Un solo listener para gestionar clics en el estado, el calendario y los encabezados.
     taskListContainer.addEventListener('click', async (event) => {
