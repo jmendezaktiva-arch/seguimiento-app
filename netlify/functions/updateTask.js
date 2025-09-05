@@ -50,9 +50,13 @@ exports.handler = async (event) => {
     // --- Lógica para CREAR una nueva tarea ---
     if (data.action === 'create') {
       console.log('Acción detectada: create');
-      const { description, dueDate, assignedTo } = data;
-      const newTaskId = Date.now().toString();
-      const newRow = [newTaskId, description, assignedTo, dueDate, 'Pendiente'];
+  // ---- INICIO DE LA CORRECCIÓN ----
+  // Se extrae dueTime de los datos recibidos
+  const { description, dueDate, dueTime, assignedTo } = data;
+  const newTaskId = Date.now().toString();
+  // Se añade dueTime a la nueva fila en la posición correcta
+  const newRow = [newTaskId, description, assignedTo, dueDate, dueTime, 'Pendiente'];
+  // ---- FIN DE LA CORRECCIÓN ----
       console.log('Creando nueva fila:', newRow);
 
       const response = await sheets.spreadsheets.values.append({

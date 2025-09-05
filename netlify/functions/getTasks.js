@@ -29,7 +29,7 @@ exports.handler = async (event) => {
   try {
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${sheetName}!A:E`,
+      range: `${sheetName}!A:F`,
     });
 
     const rows = response.data.values;
