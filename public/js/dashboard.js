@@ -55,6 +55,13 @@ const loadAdminDashboard = async () => {
     const allResults = await resultsResponse.json();
     const allUsers = await usersResponse.json();
 
+    // ---- INICIO DEL CAMBIO 1: Crear mapa de usuarios ----
+    const userMap = new Map();
+    allUsers.forEach(user => {
+        if(user.email) userMap.set(user.email, user.name);
+    });
+    // ---- FIN DEL CAMBIO 1 ----
+
     const dataByUser = {};
 
     allUsers.forEach(user => {
@@ -72,9 +79,13 @@ const loadAdminDashboard = async () => {
     teamListBody.innerHTML = '';
 
     for (const email in dataByUser) {
+        // ---- INICIO DEL CAMBIO 2: Usar el mapa para obtener el nombre ----
+        const userName = userMap.get(email) || email;
+        // ---- FIN DEL CAMBIO 2 ----
+
         const { tasks, results } = dataByUser[email];
         
-        const result = results.length > 0 ? results[0] : null; // Tomar el primer resultado para la evaluación
+        const result = results.length > 0 ? results[0] : null;
         const resultadoTexto = results.map(r => r.expectedResult).join('<br>') || '<em>Sin definir</em>';
 
         const completed = tasks.filter(t => t.status === 'Cumplida').length;
@@ -92,7 +103,7 @@ const loadAdminDashboard = async () => {
 
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-900">${email}</td>
+            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-900">${userName}</td>
             <td class="px-6 py-4 text-sm text-slate-500">${evaluationCellHtml}</td>
             <td class="whitespace-normal px-6 py-4 text-sm text-slate-600">${resultadoTexto}</td>
             <td class="whitespace-nowrap px-6 py-4 text-sm font-bold ${color}">${percentage}%</td>

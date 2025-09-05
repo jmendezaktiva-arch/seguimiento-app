@@ -25,6 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // ESTA LÍNEA ES LA NUEVA ADICIÓN
+    let userMap = new Map();
+
     // --- Elementos del DOM ---
     const taskListContainer = document.getElementById('task-list');
     const addTaskForm = document.getElementById('add-task-form');
@@ -34,17 +37,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskResponsibleSelect = document.getElementById('task-responsible');
     const resultResponsibleSelect = document.getElementById('result-responsible');
 
+    // ---- INICIO DEL CAMBIO 2: REEMPLAZA ESTA FUNCIÓN COMPLETA ----
     const loadUsersIntoDropdowns = async () => {
         try {
             const response = await fetch('/.netlify/functions/getUsers');
             const users = await response.json();
+
+            // Llenamos el mapa de usuarios para usarlo después
+            userMap.clear();
+            users.forEach(user => {
+                if(user.email) userMap.set(user.email, user.name);
+            });
+            
             taskResponsibleSelect.innerHTML = '<option value="">Selecciona un responsable</option>';
             resultResponsibleSelect.innerHTML = '<option value="">Selecciona un responsable</option>';
+            
+            // Llenamos los menús desplegables con los nombres
             users.forEach(user => {
                 if (user.email) {
                     const option = document.createElement('option');
-                    option.value = user.email;
-                    option.textContent = user.email;
+                    option.value = user.email;      // El valor interno sigue siendo el email
+                    option.textContent = user.name; // El texto visible ahora es el nombre
                     taskResponsibleSelect.appendChild(option.cloneNode(true));
                     resultResponsibleSelect.appendChild(option);
                 }
@@ -55,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
             resultResponsibleSelect.innerHTML = '<option value="">Error al cargar</option>';
         }
     };
+    // ---- FIN DEL CAMBIO 2 ----
 
     saveResultButton.addEventListener('click', async () => {
         const weekId = getCurrentWeekId();
@@ -88,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ---- INICIO DEL CAMBIO 3: REEMPLAZA ESTA FUNCIÓN COMPLETA ----
     const renderTasks = (tasks) => {
         taskListContainer.innerHTML = '';
         if (tasks.length === 0) {
@@ -95,35 +110,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        tasks.sort((a, b) => {
-            const dateA = parseDate(a.dueDate);
-            const dateB = parseDate(b.dueDate);
-            if (!dateA) return 1;
-            if (!dateB) return -1;
-            return dateA - dateB;
-        });
-
-        const groupedTasks = tasks.reduce((acc, task) => {
-            const date = parseDate(task.dueDate);
-            const groupKey = (date && !isNaN(date))
-                ? new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(date)
-                : 'Sin Fecha';
-            if (!acc[groupKey]) acc[groupKey] = [];
-            acc[groupKey].push(task);
-            return acc;
-        }, {});
+        // ... (el código de tasks.sort y groupedTasks se queda igual) ...
 
         for (const groupKey in groupedTasks) {
-            const monthBlock = document.createElement('div');
-            monthBlock.className = 'mb-4';
-            monthBlock.innerHTML = `
-                <div class="flex cursor-pointer items-center justify-between rounded-md bg-slate-200 p-3">
-                    <h3 class="font-bold capitalize text-slate-700">${groupKey}</h3>
-                    <svg class="h-5 w-5 transform text-slate-500 transition-transform" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
-                </div>
-                <div class="tasks-sublist mt-2 hidden space-y-2 pl-4"></div>
-            `;
-            const tasksSublist = monthBlock.querySelector('.tasks-sublist');
+            // ... (el código para crear monthBlock se queda igual) ...
 
             groupedTasks[groupKey].forEach(task => {
                 const statusColor = task.status === 'Cumplida' ? 'bg-green-500' : 'bg-red-500';
@@ -131,38 +121,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 taskElement.className = 'flex items-center justify-between rounded-md border border-slate-200 p-3';
                 taskElement.dataset.rowNumber = task.rowNumber;
                 taskElement.dataset.status = task.status;
-
-                // --- INICIO DEL CÓDIGO CORREGIDO ---
-                // El HTML se construye correctamente aquí, moviendo el código que estaba en el lugar equivocado.
+                
+                // Usamos el mapa para obtener el nombre del responsable
+                const assigneeName = userMap.get(task.assignedTo) || task.assignedTo;
+                
                 taskElement.innerHTML = `
-    <div class="flex items-center flex-grow">
-        <span class="status-circle mr-3 h-4 w-4 flex-shrink-0 cursor-pointer rounded-full ${statusColor}" title="Cambiar estado"></span>
-        <div class="min-w-0">
-            <p class="text-slate-800 font-medium truncate">${task.description}</p>
-            <p class="text-sm text-slate-500 truncate">${task.assignedTo}</p>
-            </div>
-    </div>
-    <div class="flex items-center space-x-4 flex-shrink-0 ml-4">
-        <span class="text-sm text-slate-500">${task.dueDate || ''}</span>
-        <button
-            title="Crear invitación de calendario"
-            class="create-event-btn text-slate-400 hover:text-blue-600"
-            data-description="${task.description}"
-            data-duedate="${task.dueDate}"
-            data-duetime="${task.dueTime || ''}"
-            data-assignee="${task.assignedTo}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
-            </svg>
-        </button>
-    </div>
+                    <div class="flex items-center flex-grow">
+                        <span class="status-circle mr-3 h-4 w-4 flex-shrink-0 cursor-pointer rounded-full ${statusColor}" title="Cambiar estado"></span>
+                        <div class="min-w-0">
+                            <p class="text-slate-800 font-medium truncate">${task.description}</p>
+                            <p class="text-sm text-slate-500 truncate">${assigneeName}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4 flex-shrink-0 ml-4">
+                        <span class="text-sm text-slate-500">${task.dueDate || ''}</span>
+                        <button
+                            title="Crear evento de calendario"
+                            class="create-event-btn text-slate-400 hover:text-blue-600"
+                            data-description="${task.description}"
+                            data-duedate="${task.dueDate}"
+                            data-duetime="${task.dueTime || ''}"
+                            data-assignee="${task.assignedTo}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
                 `;
-                // --- FIN DEL CÓDIGO CORREGIDO ---
                 tasksSublist.appendChild(taskElement);
             });
             taskListContainer.appendChild(monthBlock);
         }
     };
+    // ---- FIN DEL CAMBIO 3 ----
 
     const loadTasks = async () => {
         try {
