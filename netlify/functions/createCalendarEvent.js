@@ -1,4 +1,4 @@
-// netlify/functions/createCalendarEvent.js
+// netlify/functions/createCalendarEvent.js (Versión para cuentas de Gmail)
 
 const { google } = require('googleapis');
 
@@ -14,20 +14,18 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'Faltan datos para crear el evento.' }) };
     }
 
-    // Configura la autenticación para actuar en nombre del organizador
+    // --- INICIO DEL CAMBIO 1: Autenticación simplificada (sin 'subject') ---
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
         private_key: process.env.GOOGLE_SHEETS_PRIVATE_KEY.replace(/\\n/g, '\n'),
       },
       scopes: ['https://www.googleapis.com/auth/calendar'],
-      // Clave para la delegación: actuar en nombre de este usuario
-      subject: organizerEmail,
     });
+    // --- FIN DEL CAMBIO 1 ---
 
     const calendar = google.calendar({ version: 'v3', auth });
 
-    // Google Calendar necesita fechas en formato ISO. Asumimos un evento de 1 hora a las 9 AM.
     const eventStartDateTime = `${dueDate}T09:00:00`;
     const eventEndDateTime = `${dueDate}T10:00:00`;
 
@@ -36,7 +34,7 @@ exports.handler = async (event) => {
       description: `Esta es una invitación de calendario para la tarea: "${summary}".`,
       start: {
         dateTime: eventStartDateTime,
-        timeZone: 'America/Mexico_City', // Ajusta tu zona horaria si es necesario
+        timeZone: 'America/Mexico_City',
       },
       end: {
         dateTime: eventEndDateTime,
@@ -44,15 +42,17 @@ exports.handler = async (event) => {
       },
       attendees: [{ email: attendeeEmail }],
       conferenceData: {
-        createRequest: { requestId: `meet-${Date.now()}` }, // Opcional: crea un enlace de Google Meet
+        createRequest: { requestId: `meet-${Date.now()}` },
       },
     };
 
+    // --- INICIO DEL CAMBIO 2: Se especifica el ID del calendario a usar ---
     await calendar.events.insert({
-      calendarId: 'primary', // Se inserta en el calendario principal del organizador
+      calendarId: organizerEmail, // Usamos el correo del organizador como ID del calendario
       resource: eventResource,
-      sendNotifications: true, // Envía las invitaciones por correo electrónico
+      sendNotifications: true,
     });
+    // --- FIN DEL CAMBIO 2 ---
 
     return {
       statusCode: 200,
