@@ -43,7 +43,10 @@ exports.handler = async (event) => {
       description: row[1],
       assignedTo: row[2],
       dueDate: row[3],
-      status: row[4],
+    // ---- INICIO DEL CAMBIO ----
+    dueTime: row[4], // Lee la nueva columna E
+    status: row[5],  // El estado ahora está en la columna F
+    // ---- FIN DEL CAMBIO ----
     }));
 
     // CAMBIO: Si el scope es 'all', devolvemos todas las tareas.
