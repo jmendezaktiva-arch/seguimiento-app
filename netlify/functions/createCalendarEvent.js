@@ -1,4 +1,4 @@
-// netlify/functions/createCalendarEvent.js (Versión para cuentas de Gmail)
+// netlify/functions/createCalendarEvent.js (VERSIÓN FINAL Y ROBUSTA)
 
 const { google } = require('googleapis');
 
@@ -8,15 +8,12 @@ exports.handler = async (event) => {
   }
 
   try {
-    // ---- INICIO DEL CAMBIO 1 ----
-    const { summary, dueDate, dueTime, attendeeEmail, organizerEmail } = JSON.parse(event.body);
-    // ---- FIN DEL CAMBIO 1 ----
+    const { summary, dueDate, dueTime, organizerEmail } = JSON.parse(event.body);
 
-    if (!summary || !dueDate || !attendeeEmail || !organizerEmail) {
+    if (!summary || !dueDate || !organizerEmail) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Faltan datos para crear el evento.' }) };
     }
 
-    // --- INICIO DEL CAMBIO 1: Autenticación simplificada (sin 'subject') ---
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
@@ -24,56 +21,63 @@ exports.handler = async (event) => {
       },
       scopes: ['https://www.googleapis.com/auth/calendar'],
     });
-    // --- FIN DEL CAMBIO 1 ---
 
     const calendar = google.calendar({ version: 'v3', auth });
 
-    // ---- INICIO DEL CAMBIO 2: Lógica de la hora ----
-    const eventTime = dueTime || '09:00'; // Si no hay hora, se usa 9 AM por defecto
-    const eventStartDateTime = `${dueDate}T${eventTime}:00`;
+    // ---- INICIO DE LA CORRECCIÓN FINAL DE FECHAS ----
 
-    // Calcula la hora de fin (asumimos 1 hora de duración)
-    const [hours, minutes] = eventTime.split(':').map(Number);
-    const endDate = new Date(eventStartDateTime);
-    endDate.setHours(hours + 1);
-    const eventEndDateTime = endDate.toISOString().slice(0, 19);
-    // ---- FIN DEL CAMBIO 2 ----
+    // 1. Establecer la hora. Si no viene, se usa 09:00 por defecto.
+    const eventTime = dueTime || '09:00';
+    
+    // 2. Construir la fecha de inicio en un formato que JavaScript pueda entender.
+    const startDateTimeString = `${dueDate}T${eventTime}:00`;
+    
+    // 3. Crear el objeto de fecha de inicio.
+    const startDate = new Date(startDateTimeString);
+
+    // 4. VERIFICACIÓN CRÍTICA: Nos aseguramos de que la fecha sea válida.
+    if (isNaN(startDate.getTime())) {
+      console.error('Fecha de inicio inválida. Valor recibido:', startDateTimeString);
+      return { statusCode: 400, body: JSON.stringify({ error: `El formato de fecha '${dueDate}' o de hora '${dueTime}' es inválido.` }) };
+    }
+
+    // 5. Calcular la fecha de fin (1 hora después) de forma segura.
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Añade 1 hora en milisegundos
+
+    // ---- FIN DE LA CORRECCIÓN FINAL DE FECHAS ----
 
     const eventResource = {
       summary: summary,
-      description: `Esta es una invitación de calendario para la tarea: "${summary}".`,
+      description: `Evento creado automáticamente para la tarea: "${summary}".`,
       start: {
-        dateTime: eventStartDateTime,
-        timeZone: 'America/Mexico_City',
+        dateTime: startDate.toISOString(), // Usamos el formato estándar ISO
+        timeZone: 'America/Mexico_City', // Ajusta si es necesario
       },
       end: {
-        dateTime: eventEndDateTime,
+        dateTime: endDate.toISOString(), // Usamos el formato estándar ISO
         timeZone: 'America/Mexico_City',
       },
-
       conferenceData: {
         createRequest: { requestId: `meet-${Date.now()}` },
       },
     };
 
-    // --- INICIO DEL CAMBIO 2: Se especifica el ID del calendario a usar ---
     await calendar.events.insert({
-      calendarId: organizerEmail, // Usamos el correo del organizador como ID del calendario
+      calendarId: organizerEmail,
       resource: eventResource,
-      sendNotifications: true,
+      sendNotifications: false, // Cambiado a false para no intentar enviar correos
     });
-    // --- FIN DEL CAMBIO 2 ---
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: 'Invitación de calendario enviada con éxito.' }),
+      body: JSON.stringify({ message: 'Evento creado en el calendario con éxito.' }),
     };
 
   } catch (error) {
-    console.error('Error al crear el evento de calendario:', error);
+    console.error('Error detallado en createCalendarEvent:', error.response ? error.response.data : error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'No se pudo enviar la invitación.' }),
+      body: JSON.stringify({ error: 'No se pudo crear el evento en el calendario.' }),
     };
   }
 };
