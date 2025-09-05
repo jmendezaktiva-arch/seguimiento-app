@@ -40,7 +40,7 @@ exports.handler = async (event) => {
         dateTime: eventEndDateTime,
         timeZone: 'America/Mexico_City',
       },
-      attendees: [{ email: attendeeEmail }],
+
       conferenceData: {
         createRequest: { requestId: `meet-${Date.now()}` },
       },
