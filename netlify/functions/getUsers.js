@@ -14,19 +14,22 @@ exports.handler = async (event, context) => {
 
     const sheets = google.sheets({ version: 'v4', auth });
 
-    // CAMBIO: Leemos las columnas B (Email) y C (Rol)
+    // ---- INICIO DEL CAMBIO 1: Ampliar el rango para incluir la Columna A ----
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: 'Usuarios!B2:C', 
+      range: 'Usuarios!A2:C', 
     });
+    // ---- FIN DEL CAMBIO 1 ----
 
     const rows = response.data.values;
     if (rows && rows.length) {
-      // CAMBIO: Creamos un array de objetos de usuario con email y rol
+      // ---- INICIO DEL CAMBIO 2: Crear objeto de usuario con el nombre ----
       const users = rows.map(row => ({
-        email: row[0] ? row[0].toLowerCase() : '',
-        role: row[1] || 'Usuario', // Si el rol no está definido, se asume 'Usuario'
+        name: row[0] || 'Sin Nombre', // Columna A
+        email: row[1] ? row[1].toLowerCase() : '', // Columna B
+        role: row[2] || 'Usuario', // Columna C
       }));
+      // ---- FIN DEL CAMBIO 2 ----
       return {
         statusCode: 200,
         body: JSON.stringify(users),
