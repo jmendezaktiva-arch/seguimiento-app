@@ -162,7 +162,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loadTasks = async () => {
         try {
-            const response = await fetch(`/.netlify/functions/getTasks?email=${userEmail}`);
+        // ---- INICIO DE LA CORRECCIÓN FINAL ----
+        // Leemos el rol del usuario que guardamos al iniciar sesión
+        const userRole = localStorage.getItem('userRole');
+        // Si el rol es 'Admin', pedimos todas las tareas ('all'), si no, solo las del usuario ('user')
+        const scope = userRole === 'Admin' ? 'all' : 'user';
+
+        // Añadimos el parámetro 'scope' a la petición
+        const response = await fetch(`/.netlify/functions/getTasks?email=${userEmail}&scope=${scope}`);
+        // ---- FIN DE LA CORRECCIÓN FINAL ----
             const tasks = await response.json();
             renderTasks(tasks);
         } catch (error) {
