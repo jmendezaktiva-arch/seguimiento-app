@@ -48,25 +48,30 @@ exports.handler = async (event) => {
       
       console.log('Respuesta de la API de Google (update):', response.data);
       return { statusCode: 200, body: JSON.stringify({ message: 'Tarea actualizada' }) };
+      // No se necesita cambio aquí, ya que el `newStatus` puede ser "En Progreso"
+    // Pero asegúrate de que tu frontend envíe el estado correcto.
     }
 
     // --- Lógica para CREAR una nueva tarea ---
     if (data.action === 'create') {
       console.log('Acción detectada: create');
-  // ---- INICIO DE LA CORRECCIÓN ----
-  // Se extrae dueTime de los datos recibidos
-  const { description, dueDate, dueTime, assignedTo } = data;
-  const newTaskId = Date.now().toString();
-  // Se añade dueTime a la nueva fila en la posición correcta
-  const newRow = [newTaskId, description, assignedTo, dueDate, dueTime, 'Pendiente'];
-  // ---- FIN DE LA CORRECCIÓN ----
+      // ---- INICIO DE LA CORRECCIÓN ----
+      // Se extrae dueTime de los datos recibidos
+      // const { description, dueDate, dueTime, assignedTo } = data; // Línea antigua
+  const { description, dueDate, dueTime, assignedTo, projectId } = data; // Nueva línea
+      const newTaskId = Date.now().toString();
+      // Se añade dueTime a la nueva fila en la posición correcta
+      // Se añade projectId a la nueva fila y el estado ahora puede ser más variado
+  // const newRow = [newTaskId, description, assignedTo, dueDate, dueTime, 'Pendiente']; // Línea antigua
+  const newRow = [newTaskId, description, assignedTo, dueDate, dueTime, 'Pendiente', projectId || '']; // Nueva línea
+      // ---- FIN DE LA CORRECCIÓN ----
       console.log('Creando nueva fila:', newRow);
 
       const response = await sheets.spreadsheets.values.append({
         spreadsheetId,
                 // ---- INICIO DE LA CORRECCIÓN 2 ----
         // El rango de datos ahora es hasta la columna F.
-        range: `${sheetName}!A:F`,
+        range: `${sheetName}!A:G`,
         // ---- FIN DE LA CORRECCIÓN 2 ----
 
         valueInputOption: 'USER_ENTERED',

@@ -18,6 +18,7 @@ exports.handler = async (event) => {
   const userEmail = event.queryStringParameters.email;
   // CAMBIO: Nuevo parámetro para saber si queremos todas las tareas
   const scope = event.queryStringParameters.scope || 'user'; // 'user' o 'all'
+  const projectId = event.queryStringParameters.projectId; // Nuevo parámetro
 
   if (!userEmail) {
     return {
@@ -46,11 +47,22 @@ exports.handler = async (event) => {
     // ---- INICIO DEL CAMBIO ----
     dueTime: row[4], // Lee la nueva columna E
     status: row[5],  // El estado ahora está en la columna F
+    projectId: row[6] || '', // Nueva propiedad
     // ---- FIN DEL CAMBIO ----
     }));
 
     // CAMBIO: Si el scope es 'all', devolvemos todas las tareas.
     // Si no, filtramos por el email del usuario como antes.
+    
+    // Reemplaza toda la lógica de filtrado final por esto:
+      let tasksToReturn = allTasks;
+
+      // 1. Filtrar por proyecto si se especifica
+      if (projectId) {
+          tasksToReturn = tasksToReturn.filter(task => task.projectId === projectId);
+      }
+    
+    // 2. Filtrar por usuario si el scope no es 'all'
     if (scope === 'all') {
       return {
         statusCode: 200,
