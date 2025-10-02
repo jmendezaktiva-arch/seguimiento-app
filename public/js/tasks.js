@@ -33,6 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultStatusMessage = document.getElementById('result-status-message');
     const taskResponsibleSelect = document.getElementById('task-responsible');
     const resultResponsibleSelect = document.getElementById('result-responsible');
+    const taskProjectSelect = document.getElementById('task-project');
+
 
     const loadUsersIntoDropdowns = async () => {
         try {
@@ -114,11 +116,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // ... añade esta nueva función
+const loadProjectsIntoDropdown = async () => {
+    try {
+        const response = await fetch('/.netlify/functions/projects');
+        const projects = await response.json();
+        taskProjectSelect.innerHTML = '<option value="">Selecciona un proyecto</option>';
+        projects.forEach(project => {
+            if (project.id && project.name) {
+                const option = document.createElement('option');
+                option.value = project.id;
+                option.textContent = project.name;
+                taskProjectSelect.appendChild(option);
+            }
+        });
+    } catch (error) {
+        console.error('Error al cargar proyectos:', error);
+        taskProjectSelect.innerHTML = '<option value="">Error al cargar</option>';
+    }
+};
+
     addTaskForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         const description = document.getElementById('task-description').value.trim();
         const dueDate = document.getElementById('task-date').value;
         const dueTime = document.getElementById('task-time').value;
+        const assignedTo = taskResponsibleSelect.value;
+        const projectId = taskProjectSelect.value; // Nueva línea
         const submitButton = addTaskForm.querySelector('button');
         if (!description || !dueDate) {
             alert('La descripción y la fecha son obligatorias.');
@@ -134,7 +158,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     description,
                     dueDate,
                     dueTime,
-                    assignedTo: taskResponsibleSelect.value
+                    assignedTo: taskResponsibleSelect.value,
+                    projectId // Nueva propiedad
                 }),
             });
             addTaskForm.reset();
@@ -243,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Esta función se asegura de que los usuarios se carguen ANTES de que se pidan las tareas.
     const initializePage = async () => {
         await loadUsersIntoDropdowns();
+        await loadProjectsIntoDropdown(); // Nueva línea
         await loadTasks();
     };
 
