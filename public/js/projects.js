@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const projectSelector = document.getElementById('project-selector');
     const kanbanBoard = document.getElementById('kanban-board');
+    const createProjectForm = document.getElementById('create-project-form'); // <-- AÑADIR ESTA LÍNEA
     let userMap = new Map();
     let currentTasks = [];
     
