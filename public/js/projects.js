@@ -82,6 +82,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- EVENTOS ---
+        // --- INICIO: AÑADIR ESTE EVENT LISTENER ---
+    createProjectForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const projectNameInput = document.getElementById('project-name');
+        const projectName = projectNameInput.value.trim();
+        if (!projectName) return;
+
+        try {
+            await fetch('/.netlify/functions/projects', {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'createProject',
+                    projectName: projectName
+                })
+            });
+            projectNameInput.value = ''; // Limpiar el input
+            await loadProjects(); // Recargar la lista de proyectos en el selector
+            alert('¡Proyecto creado con éxito!');
+        } catch (error) {
+            console.error('Error al crear proyecto:', error);
+            alert('No se pudo crear el proyecto.');
+        }
+    });
+    // --- FIN: AÑADIR ESTE EVENT LISTENER ---
+    
     projectSelector.addEventListener('change', () => loadTasksForProject(projectSelector.value));
     kanbanBoard.addEventListener('click', (e) => {
         const card = e.target.closest('.task-card');
