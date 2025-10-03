@@ -30,7 +30,7 @@ exports.handler = async (event) => {
   try {
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${sheetName}!A:F`,
+      range: `${sheetName}!A:G`,
     });
 
     const rows = response.data.values;
@@ -51,30 +51,22 @@ exports.handler = async (event) => {
     // ---- FIN DEL CAMBIO ----
     }));
 
-    // CAMBIO: Si el scope es 'all', devolvemos todas las tareas.
-    // Si no, filtramos por el email del usuario como antes.
-    
-    // Reemplaza toda la lógica de filtrado final por esto:
-      let tasksToReturn = allTasks;
+    // ---- CORRECCIÓN 2: Lógica de filtrado secuencial y correcta ----
+    let tasksToReturn = allTasks;
 
-      // 1. Filtrar por proyecto si se especifica
-      if (projectId) {
-          tasksToReturn = tasksToReturn.filter(task => task.projectId === projectId);
-      }
-    
-    // 2. Filtrar por usuario si el scope no es 'all'
-    if (scope === 'all') {
-      return {
-        statusCode: 200,
-        body: JSON.stringify(allTasks),
-      };
-    } else {
-      const userTasks = allTasks.filter(task => task.assignedTo && task.assignedTo.toLowerCase() === userEmail.toLowerCase());
-      return {
-        statusCode: 200,
-        body: JSON.stringify(userTasks),
-      };
+    if (projectId) {
+      tasksToReturn = tasksToReturn.filter(task => task.projectId === projectId);
     }
+    
+    if (scope === 'user') {
+      tasksToReturn = tasksToReturn.filter(task => task.assignedTo && task.assignedTo.toLowerCase() === userEmail.toLowerCase());
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify(tasksToReturn),
+    };
+    // ---- FIN DE LA CORRECCIÓN ----
 
   } catch (error) {
     console.error('Error al leer las tareas:', error);
