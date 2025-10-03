@@ -30,10 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const loadTasksForProject = async (projectId) => {
-        if (!projectId) { kanbanBoard.querySelectorAll('.space-y-3').forEach(c => c.innerHTML = ''); return; }
-        const response = await fetch(`/.netlify/functions/getTasks?projectId=${projectId}&scope=all`);
-        currentTasks = await response.json();
-        renderKanbanBoard(currentTasks);
+    if (!projectId) { kanbanBoard.querySelectorAll('.space-y-3').forEach(c => c.innerHTML = ''); return; }
+    // SECCIÓN EXACTA DEL CAMBIO: Se añade &email=${userEmail} a la URL
+    const response = await fetch(`/.netlify/functions/getTasks?projectId=${projectId}&scope=all&email=${userEmail}`);
+    currentTasks = await response.json();
+    renderKanbanBoard(currentTasks);
     };
 
     // --- RENDERIZADO DEL TABLERO ---
