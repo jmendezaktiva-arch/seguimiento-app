@@ -43,7 +43,6 @@ const loadAdminDashboard = async () => {
   const weekId = getCurrentWeekId();
 
   try {
-    // ---- INICIO DE LA SOLUCIÓN (PARTE 1) ----
     // 1. Pedimos los resultados SIN especificar el weekId para obtener el historial.
     const [tasksResponse, allResultsResponse, usersResponse] = await Promise.all([
         fetch(`/.netlify/functions/getTasks?email=${userEmail}&scope=all`),
@@ -54,7 +53,7 @@ const loadAdminDashboard = async () => {
     if (!tasksResponse.ok || !allResultsResponse.ok || !usersResponse.ok) throw new Error('Error al cargar datos del equipo.');
     
     const allTasks = await tasksResponse.json();
-    const allResults = await allResultsResponse.json(); // Ahora contiene el historial
+    const allResults = await allResultsResponse.json();
     const allUsers = await usersResponse.json();
 
     const userMap = new Map();
@@ -63,9 +62,7 @@ const loadAdminDashboard = async () => {
     });
 
     const dataByUser = {};
-
     allUsers.forEach(user => {
-        // 2. Preparamos el objeto de cada usuario para almacenar sus datos.
         if(user.email) dataByUser[user.email] = { tasks: [], currentResult: null, historicalResults: [] };
     });
 
@@ -75,7 +72,6 @@ const loadAdminDashboard = async () => {
 
     allResults.forEach(result => {
         if (dataByUser[result.assignedTo]) {
-            // 3. Separamos el resultado de la semana actual del resto del historial.
             if(result.weekId === weekId) {
                 dataByUser[result.assignedTo].currentResult = result;
             }
@@ -89,18 +85,15 @@ const loadAdminDashboard = async () => {
         const userName = userMap.get(email) || email;
         const { tasks, currentResult, historicalResults } = dataByUser[email];
         
-        // 4. Calculamos el nuevo indicador "Enfoque en resultados".
         const scorePoints = { 'Verde': 2, 'Amarillo': 1, 'Rojo': 0 };
         let totalScore = 0;
         let maxPossibleScore = 0;
-        
         historicalResults.forEach(res => {
             if (res.evaluation && scorePoints[res.evaluation] !== undefined) {
                 totalScore += scorePoints[res.evaluation];
-                maxPossibleScore += 2; // Máximo puntaje posible es siempre 2 (Verde)
+                maxPossibleScore += 2;
             }
         });
-
         const focusPercentage = maxPossibleScore > 0 ? Math.round((totalScore / maxPossibleScore) * 100) : 0;
         let focusColor = 'text-slate-500';
         if (maxPossibleScore > 0) {
@@ -110,11 +103,16 @@ const loadAdminDashboard = async () => {
         }
         
         const resultadoTexto = currentResult ? currentResult.expectedResult : '<em>Sin definir</em>';
-        // ---- FIN DE LA SOLUCIÓN (PARTE 1) ----
-
         const completed = tasks.filter(t => t.status === 'Cumplida').length;
         const total = tasks.length;
-        // ... (resto de cálculos existentes) ...
+        const today = new Date(); today.setHours(0,0,0,0);
+        const overdue = tasks.filter(t => t.status === 'Pendiente' && parseDate(t.dueDate) < today).length;
+        
+        // ---- LÍNEA CORREGIDA ----
+        // Aquí reintroducimos la definición de la variable 'pending'.
+        const pending = total - completed;
+        // ---- FIN DE LA CORRECIÓN ----
+
         const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
         let color = 'text-red-600';
         if (percentage >= 80) color = 'text-green-600';
@@ -123,8 +121,6 @@ const loadAdminDashboard = async () => {
         const evaluationCellHtml = createEvaluationCell(currentResult, email, weekId);
 
         const row = document.createElement('tr');
-        // ---- INICIO DE LA SOLUCIÓN (PARTE 2) ----
-        // 5. Insertamos la nueva celda (<td>) en la fila de la tabla.
         row.innerHTML = `
             <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-900">${userName}</td>
             <td class="px-6 py-4 text-sm text-slate-500">${evaluationCellHtml}</td>
@@ -135,13 +131,12 @@ const loadAdminDashboard = async () => {
             <td class="whitespace-nowrap px-6 py-4 text-sm text-slate-500">${pending}</td>
             <td class="whitespace-nowrap px-6 py-4 text-sm font-bold text-red-500">${overdue}</td>
         `;
-        // ---- FIN DE LA SOLUCIÓN (PARTE 2) ----
         teamListBody.appendChild(row);
     }
 
   } catch (error) {
     console.error("Error al cargar el dashboard de admin:", error);
-    teamListBody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-red-500">No se pudieron cargar los datos.</td></tr>`;
+    teamListBody.innerHTML = `<tr><td colspan="8" class="text-center p-4 text-red-500">No se pudieron cargar los datos.</td></tr>`;
   }
 };
 
