@@ -51,22 +51,27 @@ exports.handler = async (event) => {
     // ---- FIN DEL CAMBIO ----
     }));
 
-    // ---- CORRECCIÓN 2: Lógica de filtrado secuencial y correcta ----
-    let tasksToReturn = allTasks;
+    // ---- INICIO DE LA SOLUCIÓN DE FILTRADO ----
+    let filteredTasks = allTasks;
 
+    // Mensaje de depuración para ver qué projectId se recibe
+    console.log(`Filtrando tareas. Recibido projectId: "${projectId}", scope: "${scope}"`);
+
+    // 1. Siempre filtramos por proyecto si se proporciona un projectId.
     if (projectId) {
-      tasksToReturn = tasksToReturn.filter(task => task.projectId === projectId);
+        filteredTasks = filteredTasks.filter(task => task.projectId === projectId);
     }
     
+    // 2. Sobre el resultado anterior, filtramos por usuario si el scope es 'user'.
     if (scope === 'user') {
-      tasksToReturn = tasksToReturn.filter(task => task.assignedTo && task.assignedTo.toLowerCase() === userEmail.toLowerCase());
+        filteredTasks = filteredTasks.filter(task => task.assignedTo && task.assignedTo.toLowerCase() === userEmail.toLowerCase());
     }
 
     return {
       statusCode: 200,
-      body: JSON.stringify(tasksToReturn),
+      body: JSON.stringify(filteredTasks),
     };
-    // ---- FIN DE LA CORRECCIÓN ----
+    // ---- FIN DE LA SOLUCIÓN DE FILTRADO ----
 
   } catch (error) {
     console.error('Error al leer las tareas:', error);
