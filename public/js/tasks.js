@@ -192,7 +192,26 @@ const loadProjectsIntoDropdown = async () => {
                     method: 'POST',
                     body: JSON.stringify({ action: 'updateStatus', rowNumber, newStatus }),
                 });
-                loadTasks();
+
+                // ---- INICIO DE LA SOLUCIÓN ----
+        // 1. Actualizamos el estado en el atributo del elemento.
+        taskElement.dataset.status = newStatus;
+
+        // 2. Apuntamos directamente al círculo que fue clickeado (el target).
+        const statusCircle = target;
+
+        // 3. Cambiamos su color.
+        if (newStatus === 'Cumplida') {
+            statusCircle.classList.remove('bg-red-500');
+            statusCircle.classList.add('bg-green-500');
+        } else {
+            statusCircle.classList.remove('bg-green-500');
+            statusCircle.classList.add('bg-red-500');
+        }
+        // ---- FIN DE LA SOLUCIÓN ----
+
+
+
             } catch (error) {
                 alert('No se pudo actualizar la tarea.');
             }
