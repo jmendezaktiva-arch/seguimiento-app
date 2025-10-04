@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadTasksForProject = async (projectId) => {
     if (!projectId) { kanbanBoard.querySelectorAll('.space-y-3').forEach(c => c.innerHTML = ''); return; }
     // SECCIÓN EXACTA DEL CAMBIO: Se añade &email=${userEmail} a la URL
-    const response = await fetch(`/.netlify/functions/getTasks?projectId=${projectId}&scope=all&email=${userEmail}`);
+    const response = await fetch(`/.netlify/functions/getTasks?projectId=${projectId}&scope=all&email=${userEmail}&bust=${Date.now()}`);
     currentTasks = await response.json();
     renderKanbanBoard(currentTasks);
     };
