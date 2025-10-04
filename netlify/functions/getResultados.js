@@ -17,10 +17,10 @@ const sheetName = 'Resultados';
 exports.handler = async (event) => {
   const scope = event.queryStringParameters.scope || 'user';
   const email = event.queryStringParameters.email;
-  const weekId = event.queryStringParameters.weekId;
+  const weekId = event.queryStringParameters.weekId; // weekId ahora es opcional
 
-  if (!email || !weekId) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Email y weekId son requeridos.' }) };
+  if (!email) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Email es requerido.' }) };
   }
 
   try {
@@ -42,17 +42,19 @@ exports.handler = async (event) => {
         evaluation: row[3] || '',
     }));
 
-    const weekResults = results.filter(r => r.weekId === weekId);
+    // ---- INICIO DE LA SECCIÓN CORREGIDA ----
+    // Esta es la única lógica de filtrado que debe existir.
+    // Si se provee un weekId, filtramos. Si no, usamos todos los resultados.
+    const resultsToReturn = weekId ? results.filter(r => r.weekId === weekId) : results;
 
     if (scope === 'all') {
-      return { statusCode: 200, body: JSON.stringify(weekResults) };
+      return { statusCode: 200, body: JSON.stringify(resultsToReturn) };
     } else {
-      // ---- INICIO DE LA CORRECCIÓN ----
-      // Usamos .filter() en lugar de .find() para que la respuesta SIEMPRE sea un array.
-      const userResults = weekResults.filter(r => r.assignedTo && r.assignedTo.toLowerCase() === email.toLowerCase());
+      // La lógica para el scope 'user' se aplica sobre el resultado anterior.
+      const userResults = resultsToReturn.filter(r => r.assignedTo && r.assignedTo.toLowerCase() === email.toLowerCase());
       return { statusCode: 200, body: JSON.stringify(userResults) };
-      // ---- FIN DE LA CORRECCIÓN ----
     }
+    // ---- FIN DE LA SECCIÓN CORREGIDA ----
 
   } catch (error) {
     console.error('Error al leer los resultados:', error);
