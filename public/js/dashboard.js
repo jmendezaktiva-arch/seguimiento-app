@@ -43,29 +43,30 @@ const loadAdminDashboard = async () => {
   const weekId = getCurrentWeekId();
 
   try {
-    const [tasksResponse, resultsResponse, usersResponse] = await Promise.all([
+    // ---- INICIO DE LA SOLUCIÓN (PARTE 1) ----
+    // 1. Pedimos los resultados SIN especificar el weekId para obtener el historial.
+    const [tasksResponse, allResultsResponse, usersResponse] = await Promise.all([
         fetch(`/.netlify/functions/getTasks?email=${userEmail}&scope=all`),
-        fetch(`/.netlify/functions/getResultados?email=${userEmail}&scope=all&weekId=${weekId}`),
+        fetch(`/.netlify/functions/getResultados?email=${userEmail}&scope=all`), // Se quitó &weekId=${weekId}
         fetch(`/.netlify/functions/getUsers`)
     ]);
 
-    if (!tasksResponse.ok || !resultsResponse.ok || !usersResponse.ok) throw new Error('Error al cargar datos del equipo.');
+    if (!tasksResponse.ok || !allResultsResponse.ok || !usersResponse.ok) throw new Error('Error al cargar datos del equipo.');
     
     const allTasks = await tasksResponse.json();
-    const allResults = await resultsResponse.json();
+    const allResults = await allResultsResponse.json(); // Ahora contiene el historial
     const allUsers = await usersResponse.json();
 
-    // ---- INICIO DEL CAMBIO 1: Crear mapa de usuarios ----
     const userMap = new Map();
     allUsers.forEach(user => {
         if(user.email) userMap.set(user.email, user.name);
     });
-    // ---- FIN DEL CAMBIO 1 ----
 
     const dataByUser = {};
 
     allUsers.forEach(user => {
-        if(user.email) dataByUser[user.email] = { tasks: [], results: [] };
+        // 2. Preparamos el objeto de cada usuario para almacenar sus datos.
+        if(user.email) dataByUser[user.email] = { tasks: [], currentResult: null, historicalResults: [] };
     });
 
     allTasks.forEach(task => {
@@ -73,44 +74,68 @@ const loadAdminDashboard = async () => {
     });
 
     allResults.forEach(result => {
-        if (dataByUser[result.assignedTo]) dataByUser[result.assignedTo].results.push(result);
+        if (dataByUser[result.assignedTo]) {
+            // 3. Separamos el resultado de la semana actual del resto del historial.
+            if(result.weekId === weekId) {
+                dataByUser[result.assignedTo].currentResult = result;
+            }
+            dataByUser[result.assignedTo].historicalResults.push(result);
+        }
     });
 
     teamListBody.innerHTML = '';
 
     for (const email in dataByUser) {
-        // ---- INICIO DEL CAMBIO 2: Usar el mapa para obtener el nombre ----
         const userName = userMap.get(email) || email;
-        // ---- FIN DEL CAMBIO 2 ----
-
-        const { tasks, results } = dataByUser[email];
+        const { tasks, currentResult, historicalResults } = dataByUser[email];
         
-        const result = results.length > 0 ? results[0] : null;
-        const resultadoTexto = results.map(r => r.expectedResult).join('<br>') || '<em>Sin definir</em>';
+        // 4. Calculamos el nuevo indicador "Enfoque en resultados".
+        const scorePoints = { 'Verde': 2, 'Amarillo': 1, 'Rojo': 0 };
+        let totalScore = 0;
+        let maxPossibleScore = 0;
+        
+        historicalResults.forEach(res => {
+            if (res.evaluation && scorePoints[res.evaluation] !== undefined) {
+                totalScore += scorePoints[res.evaluation];
+                maxPossibleScore += 2; // Máximo puntaje posible es siempre 2 (Verde)
+            }
+        });
+
+        const focusPercentage = maxPossibleScore > 0 ? Math.round((totalScore / maxPossibleScore) * 100) : 0;
+        let focusColor = 'text-slate-500';
+        if (maxPossibleScore > 0) {
+            if (focusPercentage >= 80) focusColor = 'text-green-600';
+            else if (focusPercentage >= 60) focusColor = 'text-yellow-600';
+            else focusColor = 'text-red-600';
+        }
+        
+        const resultadoTexto = currentResult ? currentResult.expectedResult : '<em>Sin definir</em>';
+        // ---- FIN DE LA SOLUCIÓN (PARTE 1) ----
 
         const completed = tasks.filter(t => t.status === 'Cumplida').length;
         const total = tasks.length;
-        const today = new Date(); today.setHours(0,0,0,0);
-        const overdue = tasks.filter(t => t.status === 'Pendiente' && parseDate(t.dueDate) < today).length;
-        const pending = total - completed;
+        // ... (resto de cálculos existentes) ...
         const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-    
         let color = 'text-red-600';
         if (percentage >= 80) color = 'text-green-600';
         else if (percentage >= 60) color = 'text-yellow-600';
 
-        const evaluationCellHtml = createEvaluationCell(result, email, weekId);
+        const evaluationCellHtml = createEvaluationCell(currentResult, email, weekId);
 
         const row = document.createElement('tr');
+        // ---- INICIO DE LA SOLUCIÓN (PARTE 2) ----
+        // 5. Insertamos la nueva celda (<td>) en la fila de la tabla.
         row.innerHTML = `
             <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-900">${userName}</td>
             <td class="px-6 py-4 text-sm text-slate-500">${evaluationCellHtml}</td>
             <td class="whitespace-normal px-6 py-4 text-sm text-slate-600">${resultadoTexto}</td>
+            <td class="whitespace-nowrap px-6 py-4 text-sm font-bold ${focusColor}">${maxPossibleScore > 0 ? focusPercentage + '%' : 'N/A'}</td>
             <td class="whitespace-nowrap px-6 py-4 text-sm font-bold ${color}">${percentage}%</td>
             <td class="whitespace-nowrap px-6 py-4 text-sm text-green-600">${completed}</td>
             <td class="whitespace-nowrap px-6 py-4 text-sm text-slate-500">${pending}</td>
             <td class="whitespace-nowrap px-6 py-4 text-sm font-bold text-red-500">${overdue}</td>
         `;
+        // ---- FIN DE LA SOLUCIÓN (PARTE 2) ----
         teamListBody.appendChild(row);
     }
 
